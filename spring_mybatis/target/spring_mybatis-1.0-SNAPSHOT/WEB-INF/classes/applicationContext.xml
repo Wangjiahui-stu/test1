@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+
+     <!--注入dao,service,依赖关系-->
+
+    <!--扫描哪些包-->
+    <context:component-scan base-package="com.aistar"></context:component-scan>
+    <!--基于注解的方式配置-->
+    <context:annotation-config></context:annotation-config>
+    <aop:aspectj-autoproxy></aop:aspectj-autoproxy><!--日志、事务-->
+
+
+    <!--导入数据源文件 dbconn.properties-->
+    <context:property-placeholder location="classpath:config/db_config.properties"/>
+
+    <!--数据源 DataSource：连接数据库
+           子类： DriverManagerDataSource   父接口 DataSource
+           数据源的获得 SpringEL
+    -->
+    <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+
+<!--mybatis 受spring容器管理
+    property: 数据源DataSource
+    property：mybatis-config.xml 的location
+    property: Mapper.xml 的locatoin
+-->
+
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="configLocation" value="classpath:config/mybatis-config.xml"/>
+        <property name="mapperLocations" value="classpath:com/aistar/mapper/*Mapper.xml"/>
+     </bean>
+
+<!--Mapper接口位置-->
+    <bean id="mapperScannerConfigurer" class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.aistar.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <!--===================================事务管理=======================================-->
+   <!--
+    编程式事务，即 事务的硬代码 直接穿插在业务中
+    事务与业务的耦合性较大，与日志一样，从核心业务中分离出来
+    事务属于服务型业务，可以横切到核心业务中
+    即 由Spring容器通过AOP的方式 管理事务
+
+    (1) 切面  aspect : 事务Transaction对象
+    (2) 增强实现  advice ： commit , rollback
+    (3) 目标对象 target ：ProductServiceImpl对象 [所有的service接口对象]
+    (4) 切点   pointcut : ProductServiceImpl.add, delete, update
+
+    Spring统一管理
+    1. xml  2. annotation
+    *-->
+    <!--===================================(1)事务对象注入到spring容器=======================================-->
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+
+    <!--===================================(2)AOP 横切事务============================================-->
+    <aop:config>
+        <aop:pointcut id="pc" expression="execution(* com.aistar.service..*.*(..))"></aop:pointcut>
+        <aop:advisor advice-ref="tx" pointcut-ref="pc"></aop:advisor>
+    </aop:config>
+
+    <!--===================================(3)事务属性配置============================================-->
+    <tx:advice id="tx" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="add*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="delete" propagation="REQUIRED"/>
+            <tx:method name="get*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+</beans>

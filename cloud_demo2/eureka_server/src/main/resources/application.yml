@@ -1,0 +1,19 @@
+#端口号
+server:
+  port: 8888
+
+#erreka实例名 集群中个根据这里相互识别
+eureka:
+  instance:
+    hostname: localhost
+
+  #客户端
+
+  client:
+    #是否开启注册服务，因为这里如果为true表示自己注册自己，而自己就是一个服务注册方，没必要自己注册自己
+    register-with-eureka: false
+    #是否开启注册服务，因为这里如果为true表示自己注册自己，而自己就是一个服务注册方，没必要自己注册自己
+    fetch-registry: false
+    #注册中心地址
+    service-url:
+      defaultZone: http://localhost:8888/eureka/
